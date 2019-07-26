@@ -1,4 +1,4 @@
-var Dictionarie = require('../../db/dictionarie/model.js')
+var Image = require('../../db/image/model.js')
 const BaseCom = require('../../base/baseCom.js')
 const {recursion} = require('../../utils/index.js')
 class Pages extends BaseCom {
@@ -13,9 +13,12 @@ class Pages extends BaseCom {
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
             body.parentId = body.parentId || '0';
-            new Dictionarie(body).save((err,data)=>{
-                err && reject(err);
-                resolve(data)
+            new Image(body)
+            .save((err,data)=>{
+                if(err){
+                    return reject(err);
+                }
+                return resolve(data);
             })
         })
         pro.then((userData)=>{
@@ -39,9 +42,10 @@ class Pages extends BaseCom {
     delete(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
-            Dictionarie.remove({
+            var ids = body.ids.split(',')
+            Image.remove({
                 _id:{
-                    $in:body.ids
+                    $in:ids
                 }
             },(err)=>{
                 err && reject(err);
@@ -70,12 +74,12 @@ class Pages extends BaseCom {
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
             var newData = {}
-            for(var key in Dictionarie.schema.obj){
+            for(var key in Image.schema.obj){
                 if(key!=='meta'){
                     newData[key] = body[key]
                 }
             }
-            Dictionarie.updateOne({
+            Image.updateOne({
                 _id:body._id
             },newData,(err,docs)=>{
                 err && reject(err);
@@ -101,52 +105,43 @@ class Pages extends BaseCom {
         })
     }
     get(req,res,next) {
+        var body = req.query;
+        const current = body.current || this.current,
+        size = body.size || this.size;
         var pro = new Promise((resolve, reject)=>{
-            var body = req.query;
-                let params = {...body};
-                delete params.size;
-                delete params.current;
-               
-                    Dictionarie.find(params)
-                    .exec((err, doc) => {
-                        if(err){
-                            reject(err);
-                        }
-                        resolve(recursion(doc));
-                    })
-        })
-        pro.then((userData)=>{
-           
-            res.json({
-                code:200,
-                msg:'succ',
-                data:userData
-            })
-        })
-        .catch((err)=>{
-            res.json({
-                code:500,
-                msg:err,
-                data:{}
-            })
-        })
-    }
-    getDict(req,res,next){
-        var pro = new Promise((resolve, reject)=>{
-            var body = req.query;
-                let params = {
-                    ...body,
-                    parentId:{
-                        $ne:'0'
+            let total = 0;
+            let parms = {...body}
+            delete parms.current;
+            delete parms.size;
+                Image
+                .countDocuments(parms,(err,num)=>{
+                    if(err){
+                        return reject(err)
                     }
-                };
-                    Dictionarie.find(params)
-                    .exec((err, doc) => {
-                        if(err){
-                            reject(err);
-                        }
-                        resolve(doc);
-                    })
+                    total = num;
+                })
+                .find(parms)
+                .populate('type','dictValue')
+                .skip((current - 1) * size/1)
+                .limit(size/1)
+                .sort('sort')
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
+                    }
+                    if(doc && doc.length){
+                        doc.forEach((item)=>{
+                            item._doc.typeName = item._doc.type.dictValue;
+                            item._doc.type = item._doc.type._id;
+                        })
+                    }
+                    resolve({
+                        total:total,
+                        current:current,
+                        size:size,
+                        records:doc
+                    });
+                })
         })
         pro.then((userData)=>{
            
@@ -164,7 +159,33 @@ class Pages extends BaseCom {
             })
         })
     }
-    
-    
+    getList(req,res,next) {
+        var pro = new Promise((resolve, reject)=>{
+            var body = req.query;
+                Image.find(body)
+                .sort("sort")
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
+                    }
+                    resolve(doc);
+                })
+        })
+        pro.then((userData)=>{
+           
+            res.json({
+                code:200,
+                msg:'succ',
+                data:userData
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
 }
 module.exports = new Pages()

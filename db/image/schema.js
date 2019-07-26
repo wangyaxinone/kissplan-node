@@ -8,14 +8,23 @@ var imagesSchema =  new mongoose.Schema({
         type:String,
         required:[true,"imgUrl不能为空"]
     },
-    imgLink:{
-        type:String,
-        required:[true,"图片链接不能为空"]
-    },
     type:{
         type:ObjectId,
         ref:'dictionarie',
         required:[true,"相册类型不能为空"]
+    },
+    imgLink:{
+        type:String,
+    },
+    imgTitle:{
+        type:String,
+    },
+    imgDescribe:{
+        type:String,
+    },
+    isOpen:{
+        type:Number,
+        default:1
     },
     sort:{
         type:String,

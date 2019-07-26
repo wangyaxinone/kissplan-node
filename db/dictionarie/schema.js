@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
-var Schema =  mongoose.Schema;
-var DictionariesSchema = new Schema({
+var dictionariesSchema = new mongoose.Schema({
     parentId:{
         type:String,
         default:'0',
@@ -13,6 +12,9 @@ var DictionariesSchema = new Schema({
     dictValue:{
         type:String,
         required:[true,"字典名称不能为空"]
+    },
+    dictKey:{
+        type:Number,
     },
     sort:{
         type:Number
@@ -35,14 +37,15 @@ var DictionariesSchema = new Schema({
         }
     }
 })
-DictionariesSchema.pre('save',function(next){
+dictionariesSchema.pre('save',function(next){
     if(this.isNew){
         this.meta.creatAt = this.meta.updateAt = Date.now();
     }else{
         this.meta.updateAt = Date.now();
     }
+    next();
 })
-DictionariesSchema.statics = {
+dictionariesSchema.statics = {
     
 }
-module.exports = DictionariesSchema;
+module.exports = dictionariesSchema;

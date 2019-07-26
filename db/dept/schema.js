@@ -1,16 +1,13 @@
 const mongoose = require('mongoose');
-var roleSchema = new mongoose.Schema({
-    roleName:{
+var deptSchema = new mongoose.Schema({
+    deptName:{
         type:String,
-        required:[true,"角色名称不能为空"],
+        required:[true,"部门名称不能为空"],
     },
     parentId:{
         type:String,
         default:'0',
-        required:[true,"父级角色不能为空"],
-    },
-    roleAlias:{
-        type:String,
+        required:[true,"父级部门不能为空"],
     },
     status:{
         type:Number,
@@ -33,7 +30,7 @@ var roleSchema = new mongoose.Schema({
         }
     }
 })
-roleSchema.pre('save',function(next){
+deptSchema.pre('save',function(next){
     if(this.isNew){
         this.meta.creatAt = this.meta.updateAt = Date.now();
     }else{
@@ -42,4 +39,4 @@ roleSchema.pre('save',function(next){
     next();
 })
 
-module.exports =  roleSchema
+module.exports =  deptSchema

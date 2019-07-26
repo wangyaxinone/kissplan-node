@@ -1,4 +1,4 @@
-var Dictionarie = require('../../db/dictionarie/model.js')
+var Dept = require('../../db/dept/model.js')
 const BaseCom = require('../../base/baseCom.js')
 const {recursion} = require('../../utils/index.js')
 class Pages extends BaseCom {
@@ -13,9 +13,12 @@ class Pages extends BaseCom {
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
             body.parentId = body.parentId || '0';
-            new Dictionarie(body).save((err,data)=>{
-                err && reject(err);
-                resolve(data)
+            new Dept(body)
+            .save((err,data)=>{
+                if(err){
+                    return reject(err);
+                }
+                return resolve(data);
             })
         })
         pro.then((userData)=>{
@@ -39,7 +42,8 @@ class Pages extends BaseCom {
     delete(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
-            Dictionarie.remove({
+            console.log(body);
+            Dept.remove({
                 _id:{
                     $in:body.ids
                 }
@@ -70,12 +74,12 @@ class Pages extends BaseCom {
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
             var newData = {}
-            for(var key in Dictionarie.schema.obj){
+            for(var key in Dept.schema.obj){
                 if(key!=='meta'){
                     newData[key] = body[key]
                 }
             }
-            Dictionarie.updateOne({
+            Dept.updateOne({
                 _id:body._id
             },newData,(err,docs)=>{
                 err && reject(err);
@@ -103,17 +107,14 @@ class Pages extends BaseCom {
     get(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
-                let params = {...body};
-                delete params.size;
-                delete params.current;
-               
-                    Dictionarie.find(params)
-                    .exec((err, doc) => {
-                        if(err){
-                            reject(err);
-                        }
-                        resolve(recursion(doc));
-                    })
+                Dept.find(body)
+                .sort("sort")
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
+                    }
+                    resolve(recursion(doc));
+                })
         })
         pro.then((userData)=>{
            
@@ -131,22 +132,17 @@ class Pages extends BaseCom {
             })
         })
     }
-    getDict(req,res,next){
+    getList(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
-                let params = {
-                    ...body,
-                    parentId:{
-                        $ne:'0'
+                Dept.find(body)
+                .sort("sort")
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
                     }
-                };
-                    Dictionarie.find(params)
-                    .exec((err, doc) => {
-                        if(err){
-                            reject(err);
-                        }
-                        resolve(doc);
-                    })
+                    resolve(doc);
+                })
         })
         pro.then((userData)=>{
            
@@ -164,7 +160,5 @@ class Pages extends BaseCom {
             })
         })
     }
-    
-    
 }
 module.exports = new Pages()

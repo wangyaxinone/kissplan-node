@@ -7,7 +7,7 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 require("./db/mongoose.js")
 require("./route/index.js")(app)
-const port = /*process.env.PORT ||*/ 3000
+const port = /*process.env.PORT ||*/ 3002
 app.listen(port, () => {
   console.log(`server started at http://localhost:${port}`)
 })

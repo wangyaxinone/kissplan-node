@@ -47,7 +47,6 @@ commentSchema.pre('save',function(next){
 })
 commentSchema.statics = {
     findByName(userName ,cb){
-        console.log(userName );
         return this.find({userName :userName })
         .sort("meta.updateAt")
         .exec(cb)

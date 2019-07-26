@@ -19,10 +19,18 @@ var userSchema = new mongoose.Schema({
         type:Number,
         default:1
     },
-    role:{
-        type:ObjectId,
-        ref:'role'
-    },
+    roleId:[
+        {
+            type:ObjectId,
+            ref:'role'
+        }
+    ],
+    deptId:[
+        {
+            type:ObjectId,
+            ref:'dept'
+        }
+    ],
     sex:{
         type:ObjectId,
         ref:'dictionarie'
@@ -60,6 +68,10 @@ var userSchema = new mongoose.Schema({
         maxlength:[200,"maxlength >=200"],
     },
     openid:String,
+    status:{
+        type:Number,
+        default:1
+    },
     meta:{
         creatAt:{
             type:Date,
@@ -93,7 +105,6 @@ userSchema.pre('save',function(next){
 })
 userSchema.statics = {
     findByName(userName ,cb){
-        console.log(userName );
         return this.find({userName :userName })
         .sort("meta.updateAt")
         .exec(cb)
