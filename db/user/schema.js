@@ -15,6 +15,9 @@ var userSchema = new mongoose.Schema({
     name:{
         type:String
     },
+    nickName:{
+        type:String
+    },
     status:{
         type:Number,
         default:1
@@ -47,7 +50,6 @@ var userSchema = new mongoose.Schema({
     },
     email:{
         type:String,
-        required:[true,"邮箱不能为空"],
         validate:{
             validator: function(data) {
                 return /^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/.test(data);

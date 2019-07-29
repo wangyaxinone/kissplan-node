@@ -159,9 +159,10 @@ class Pages extends BaseCom {
             })
         })
     }
-    getList(req,res,next) {
+    getCarousel(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
+            body.status = 1;
                 Image.find(body)
                 .sort("sort")
                 .exec((err, doc) => {
@@ -172,7 +173,6 @@ class Pages extends BaseCom {
                 })
         })
         pro.then((userData)=>{
-           
             res.json({
                 code:200,
                 msg:'succ',

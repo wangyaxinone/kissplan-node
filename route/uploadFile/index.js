@@ -31,4 +31,5 @@ createFolder(uploadFolder);
 
 var upload = multer({ storage: storage }) 
 router.post('/uploadFile',upload.single('file'),uploadFile.post);
+router.get('/imagesList',uploadFile.getList);
 module.exports = router;

@@ -21,7 +21,8 @@ var articleSchema =  new mongoose.Schema({
         required:[true,"文章内容不能为空"]
     },
     type:{
-        type:String,
+        type:mongoose.Schema.Types.ObjectId,
+        ref:'dictionarie',
         required:[true,"文章类型不能为空"]
     },
     redNum:{

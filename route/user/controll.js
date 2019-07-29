@@ -1,4 +1,5 @@
 var User = require('../../db/user/model.js')
+var Role = require('../../db/role/model.js')
 const jwt = require('jsonwebtoken'); 
 const bcrypt = require('bcrypt') ; 
 const baseCom = require('../../base/baseCom.js')
@@ -10,31 +11,39 @@ class Account extends baseCom {
         this.hasUserName = this.hasUserName.bind(this);
         this.hasPhone = this.hasPhone.bind(this);
         this.userList = this.userList.bind(this);
+        this.getAuthor = this.getAuthor.bind(this)
     }
     signUp(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
             User.findOne({userName :req.body.userName })
-            .populate('deptId')
-            .populate('roleId')
             .exec((err,data)=>{
                 if(err){
                     reject(err);
                 }
                 if(!data){
-                    var name=new User({
-                        userName:req.body.userName,
-                        passWord:req.body.passWord,
-                        phone:req.body.phone,
+                    Role.findOne({
+                        roleAlias:'author',
                     })
-                    name.save(function(err){
-                        if(err){
-                            reject('账号保存失败') 
-                        }
-                        User.findOne({userName:req.body.userName},function(err,userData){
+                    .exec((err,roleData)=>{
+
+                        var name=new User({
+                            userName:req.body.userName,
+                            passWord:req.body.passWord,
+                            phone:req.body.phone,
+                            avatarImg:this.baseUrl+'/images/avatarImg.jpg',
+                            roleId:[roleData.id]
+                        })
+                        name.save(function(err){
+                            console.log(err);
                             if(err){
-                                reject('账号保存成功，查询失败') 
+                                reject('账号保存失败') 
                             }
-                            resolve(userData);
+                            User.findOne({userName:req.body.userName},function(err,userData){
+                                if(err){
+                                    reject('账号保存成功，查询失败') 
+                                }
+                                resolve(userData);
+                            })
                         })
                     })
                     
@@ -248,6 +257,7 @@ class Account extends baseCom {
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
             body.parentId = body.parentId || '0';
+            body.avatarImg = this.baseUrl+'/images/avatarImg.jpg';
             new User(body)
             .save((err,data)=>{
                 if(err){
@@ -355,6 +365,71 @@ class Account extends baseCom {
                 code:200,
                 msg:'succ',
                 data:userData.length==1?userData[0]:userData
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    getAuthor(req,res,next) {
+        console.log(1)
+        var pro = new Promise((resolve, reject)=>{
+            var body = req.body;
+            const current = body.current || this.current,
+            size = body.size || this.size;
+            let total = 0;
+            let parms = {...body}
+            delete parms.current;
+            delete parms.size;
+            
+            Role.findOne({
+                roleAlias:'author',
+            })
+            .exec((err,data)=>{
+                if(err){
+                    reject(err);
+                }
+                User
+                .countDocuments(parms,(err,num)=>{
+                    if(err){
+                        return reject(err)
+                    }
+                    total = num;
+                })
+                .find({
+                    roleId:{
+                        $elemMatch:{$eq:data._id}
+                    },
+                    ...parms
+                })
+                .populate('sex','dictValue')
+                .skip((current - 1) * size/1)
+                .limit(size/1)
+                .sort({'meta.updateAt': -1})
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
+                    }
+                    resolve({
+                        total:total,
+                        current:current,
+                        size:size,
+                        records:doc
+                    });
+                })
+            })
+                
+        })
+        pro.then((userData)=>{
+           
+            res.json({
+                code:200,
+                msg:'succ',
+                data:userData.length==1?userData:userData
             })
         })
         .catch((err)=>{

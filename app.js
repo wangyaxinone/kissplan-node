@@ -4,6 +4,7 @@ const path = require('path')
 const isProd = process.env.NODE_ENV !== 'development'
 const app = express();
 const bodyParser = require('body-parser');
+app.use('/images',express.static(path.join(__dirname,'./images')));
 app.use(bodyParser.json());
 require("./db/mongoose.js")
 require("./route/index.js")(app)

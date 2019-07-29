@@ -6,6 +6,7 @@ class baseCom {
         this.userInfo = {};
         this.isAdmin = this.isAdmin.bind(this);
         this.authentication = this.authentication.bind(this);
+        this.baseUrl= 'http://localhost:3002'
     }
     logs(req,res,next) {
         next();

@@ -6,5 +6,5 @@ router.post('/images',Image.authentication,Image.post);
 router.delete('/images',Image.authentication,Image.delete);
 router.put('/images',Image.authentication,Image.put);
 router.get('/images',Image.authentication,Image.get);
-router.get('/getList',Image.authentication,Image.getList);
+router.get('/getCarousel',Image.getCarousel);
 module.exports = router;
