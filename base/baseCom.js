@@ -33,13 +33,12 @@ class baseCom {
     authentication(req,res,next) {
         var _this = this;
         const token = req.headers['blade-auth']
-        
         if(token){
             let secretOrPrivateKey="suiyi"; // 这是加密的key（密钥） 
 
             jwt.verify(token, secretOrPrivateKey, function (err, decode) {
                 if (err) {  //  时间失效的时候/ 伪造的token          
-                    res.json({
+                    return res.json({
                         code:401,
                         msg:'登陆状态失效'
                     })        
@@ -49,7 +48,7 @@ class baseCom {
             })
 
         }else{
-            res.json({
+            return res.json({
                 code:401,
                 msg:'登陆状态失效'
             })

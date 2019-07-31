@@ -376,9 +376,8 @@ class Account extends baseCom {
         })
     }
     getAuthor(req,res,next) {
-        console.log(1)
         var pro = new Promise((resolve, reject)=>{
-            var body = req.body;
+            var body = req.query;
             const current = body.current || this.current,
             size = body.size || this.size;
             let total = 0;
@@ -414,6 +413,35 @@ class Account extends baseCom {
                     if(err){
                         reject(err);
                     }
+                    if(doc  && doc.length){
+                        doc.forEach((item)=>{
+                            item._doc.deptName = [];
+                            if(item.deptId && item.deptId.length){
+                                item.deptId = item.deptId.map((child)=>{
+                                    item._doc.deptName.push(child.deptName);
+                                    return child._id;
+                                })
+                            }
+                            item._doc.roleName = [];
+                            if(item.roleId && item.roleId.length){
+                                item.roleId = item.roleId.map((child)=>{
+                                    item._doc.roleName.push(child.roleName);
+                                    return child._id;
+                                })
+                            }
+                            item._doc.roleName = item._doc.roleName.join(',')
+                            item._doc.deptName = item._doc.deptName.join(',')
+                            item._doc.roleId = item._doc.roleId.join(',')
+                            item._doc.deptId = item._doc.deptId.join(',')
+                            if(item._doc.sex){
+    
+                                item._doc.sexName = item._doc.sex.dictValue
+                                item._doc.sex = item._doc.sex._id
+                            }
+                            
+                        })
+                    }
+    
                     resolve({
                         total:total,
                         current:current,
@@ -430,6 +458,38 @@ class Account extends baseCom {
                 code:200,
                 msg:'succ',
                 data:userData.length==1?userData:userData
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    switchEnable(req,res,next){
+        var pro = new Promise((resolve, reject)=>{
+            var body = req.body;
+            var newData = {
+                status:body.status
+            }
+            
+            User.updateOne({
+                _id:body._id
+            },newData,(err,docs)=>{
+                err && reject(err);
+                resolve(docs);
+            })
+        })
+        pro.then((userData)=>{
+           
+            res.json({
+                code:200,
+                msg:'succ',
+                data:{
+                    ...userData,
+                }
             })
         })
         .catch((err)=>{

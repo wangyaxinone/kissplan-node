@@ -3,6 +3,15 @@ const fs = require('fs')
 const path = require('path')
 const isProd = process.env.NODE_ENV !== 'development'
 const app = express();
+var allowCors = function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Credentials','true');
+  next();
+};
+app.use(allowCors);//使用跨域中间件
+
 const bodyParser = require('body-parser');
 app.use('/images',express.static(path.join(__dirname,'./images')));
 app.use(bodyParser.json());

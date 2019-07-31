@@ -12,7 +12,7 @@ class Pages extends BaseCom {
     post(req,res,next){
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
-            body.parentId = body.parentId || '0';
+            body.user = this.userInfo._id;
             new Article(body)
             .save((err,data)=>{
                 if(err){
@@ -112,6 +112,8 @@ class Pages extends BaseCom {
             let parms = {...body}
             delete parms.current;
             delete parms.size;
+            parms.self = false;
+            parms.status = 1;
                 Article
                 .countDocuments(parms,(err,num)=>{
                     if(err){
@@ -120,19 +122,13 @@ class Pages extends BaseCom {
                     total = num;
                 })
                 .find(parms)
-                .populate('type','dictValue')
+                .populate('user')
                 .skip((current - 1) * size/1)
                 .limit(size/1)
                 .sort('sort')
                 .exec((err, doc) => {
                     if(err){
                         reject(err);
-                    }
-                    if(doc && doc.length){
-                        doc.forEach((item)=>{
-                            item._doc.typeName = item._doc.type.dictValue;
-                            item._doc.type = item._doc.type._id;
-                        })
                     }
                     resolve({
                         total:total,
@@ -144,14 +140,44 @@ class Pages extends BaseCom {
         })
         pro.then((userData)=>{
            
-            res.json({
+            return res.json({
                 code:200,
                 msg:'succ',
                 data:userData
             })
         })
         .catch((err)=>{
-            res.json({
+            return res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    getNews(req,res,next) {
+        var body = req.query;
+        var pro = new Promise((resolve, reject)=>{
+           
+                Article
+                .findById(body)
+                .populate('user')
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
+                    }
+                    resolve(doc);
+                })
+        })
+        pro.then((userData)=>{
+           
+            return res.json({
+                code:200,
+                msg:'succ',
+                data:userData
+            })
+        })
+        .catch((err)=>{
+            return res.json({
                 code:500,
                 msg:err,
                 data:{}

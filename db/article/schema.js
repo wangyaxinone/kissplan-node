@@ -12,10 +12,7 @@ var articleSchema =  new mongoose.Schema({
         type:String,
         required:[true,"文章标题不能为空"]
     },
-    introduction:{
-        type:String,
-        required:[true,"文章简介不能为空"]
-    },
+    
     content:{
         type:String,
         required:[true,"文章内容不能为空"]
@@ -24,6 +21,9 @@ var articleSchema =  new mongoose.Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:'dictionarie',
         required:[true,"文章类型不能为空"]
+    },
+    thumbnail:{
+        type:Array,
     },
     redNum:{
         type:Number,
