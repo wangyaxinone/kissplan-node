@@ -8,15 +8,15 @@ var commentReplySchema = new mongoose.Schema({
     },
     from:{
         type:ObjectId,
-        ref:'user',
+        ref:'User',
         required:[true,"来源不能为空"]
     },
     to:{
         type:ObjectId,
-        ref:'user',
+        ref:'User',
         required:[true,"目标不能为空"]
     },
-    comment:{
+    commentReply:{
         type:String,
         maxlength:200,
         minlength:10,

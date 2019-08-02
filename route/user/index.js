@@ -13,4 +13,5 @@ router.put('/user',User.authentication,User.put);
 router.delete('/user',User.authentication,User.delete);
 router.get('/getAuthor',User.authentication,User.getAuthor);
 router.put('/switchEnable',User.authentication,User.switchEnable);
+router.get('/signOut',User.authentication,User.signOut);
 module.exports = router;

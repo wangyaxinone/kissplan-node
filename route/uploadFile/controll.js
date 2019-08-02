@@ -40,7 +40,6 @@ class Account extends baseCom {
         // 文件上传
         return new Promise((resolved, reject) => {
             formUploader.putFile(uploadToken, key, localFile, putExtra, function (respErr, respBody, respInfo) {
-                console.log(respInfo.statusCode);
                 if (respErr) {
                     reject(respInfo)
                 }
@@ -63,7 +62,6 @@ class Account extends baseCom {
         .then((userData)=>{
             fs.unlink(file.path, (err) => {
                 if (err) throw err;
-                console.log('已成功删除 '+file.path);
             });
               
             res.json({
@@ -77,7 +75,6 @@ class Account extends baseCom {
         .catch((err)=>{
             fs.unlink(file.path, (err) => {
                 if (err) throw err;
-                console.log('已成功删除 '+file.path);
             });
             res.json({
                 code:500,
@@ -96,11 +93,9 @@ class Account extends baseCom {
             headers: {'Authorization': this.token},
         })
         .then((data)=>{
-            console.log(data)
             res.json(data)
         })
         .catch((err)=>{
-            console.log(err)
             res.json(err)
         })
     }

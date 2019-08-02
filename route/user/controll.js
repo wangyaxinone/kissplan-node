@@ -12,6 +12,14 @@ class Account extends baseCom {
         this.hasPhone = this.hasPhone.bind(this);
         this.userList = this.userList.bind(this);
         this.getAuthor = this.getAuthor.bind(this)
+        this.signOut = this.signOut.bind(this);
+    }
+    signOut(req,res,next) {
+        this.userInfo = {};
+        res.json({
+            code:200,
+            msg:'succ'
+        })
     }
     signUp(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
@@ -34,7 +42,6 @@ class Account extends baseCom {
                             roleId:[roleData.id]
                         })
                         name.save(function(err){
-                            console.log(err);
                             if(err){
                                 reject('账号保存失败') 
                             }
@@ -398,57 +405,58 @@ class Account extends baseCom {
                         return reject(err)
                     }
                     total = num;
+                    User.find({
+                        roleId:{
+                            $elemMatch:{$eq:data._id}
+                        },
+                        ...parms
+                    })
+                    .populate('sex','dictValue')
+                    .skip((current - 1) * size/1)
+                    .limit(size/1)
+                    .sort({'meta.updateAt': -1})
+                    .exec((err, doc) => {
+                        if(err){
+                            reject(err);
+                        }
+                        if(doc  && doc.length){
+                            doc.forEach((item)=>{
+                                item._doc.deptName = [];
+                                if(item.deptId && item.deptId.length){
+                                    item.deptId = item.deptId.map((child)=>{
+                                        item._doc.deptName.push(child.deptName);
+                                        return child._id;
+                                    })
+                                }
+                                item._doc.roleName = [];
+                                if(item.roleId && item.roleId.length){
+                                    item.roleId = item.roleId.map((child)=>{
+                                        item._doc.roleName.push(child.roleName);
+                                        return child._id;
+                                    })
+                                }
+                                item._doc.roleName = item._doc.roleName.join(',')
+                                item._doc.deptName = item._doc.deptName.join(',')
+                                item._doc.roleId = item._doc.roleId.join(',')
+                                item._doc.deptId = item._doc.deptId.join(',')
+                                if(item._doc.sex){
+        
+                                    item._doc.sexName = item._doc.sex.dictValue
+                                    item._doc.sex = item._doc.sex._id
+                                }
+                                
+                            })
+                        }
+        
+                        resolve({
+                            total:total,
+                            current:current,
+                            size:size,
+                            records:doc
+                        });
+                    })
                 })
-                .find({
-                    roleId:{
-                        $elemMatch:{$eq:data._id}
-                    },
-                    ...parms
-                })
-                .populate('sex','dictValue')
-                .skip((current - 1) * size/1)
-                .limit(size/1)
-                .sort({'meta.updateAt': -1})
-                .exec((err, doc) => {
-                    if(err){
-                        reject(err);
-                    }
-                    if(doc  && doc.length){
-                        doc.forEach((item)=>{
-                            item._doc.deptName = [];
-                            if(item.deptId && item.deptId.length){
-                                item.deptId = item.deptId.map((child)=>{
-                                    item._doc.deptName.push(child.deptName);
-                                    return child._id;
-                                })
-                            }
-                            item._doc.roleName = [];
-                            if(item.roleId && item.roleId.length){
-                                item.roleId = item.roleId.map((child)=>{
-                                    item._doc.roleName.push(child.roleName);
-                                    return child._id;
-                                })
-                            }
-                            item._doc.roleName = item._doc.roleName.join(',')
-                            item._doc.deptName = item._doc.deptName.join(',')
-                            item._doc.roleId = item._doc.roleId.join(',')
-                            item._doc.deptId = item._doc.deptId.join(',')
-                            if(item._doc.sex){
-    
-                                item._doc.sexName = item._doc.sex.dictValue
-                                item._doc.sex = item._doc.sex._id
-                            }
-                            
-                        })
-                    }
-    
-                    resolve({
-                        total:total,
-                        current:current,
-                        size:size,
-                        records:doc
-                    });
-                })
+                
             })
                 
         })

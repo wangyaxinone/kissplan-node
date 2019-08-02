@@ -8,13 +8,8 @@ var commentSchema = new mongoose.Schema({
     },
     from:{
         type:ObjectId,
-        ref:'user',
+        ref:'User',
         required:[true,"来源不能为空"]
-    },
-    to:{
-        type:ObjectId,
-        ref:'user',
-        required:[true,"目标不能为空"]
     },
     comment:{
         type:String,
@@ -22,6 +17,12 @@ var commentSchema = new mongoose.Schema({
         minlength:10,
         required:[true,"内容不能为空"]
     },
+    commentThumbsUp:[
+        {
+            type:ObjectId,
+            ref:'User',
+        }
+    ],
     status:{
         type:Number,
         default:1

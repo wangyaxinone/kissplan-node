@@ -1,4 +1,6 @@
 var Article = require('../../db/Article/model.js')
+var Comment = require('../../db/comment/model.js')
+var CommentReply = require('../../db/commentReply/model.js')
 const BaseCom = require('../../base/baseCom.js')
 const {recursion} = require('../../utils/index.js')
 class Pages extends BaseCom {
@@ -8,11 +10,18 @@ class Pages extends BaseCom {
         this.delete = this.delete.bind(this);
         this.put = this.put.bind(this);
         this.get = this.get.bind(this);
+        this.getNews = this.getNews.bind(this);
+        this.articleThumbsUp = this.articleThumbsUp.bind(this);
+        this.comment = this.comment.bind(this);
+        this.getComment = this.getComment.bind(this);
+        this.commentReply = this.commentReply.bind(this)
+        this.commentThumbsUp = this.commentThumbsUp.bind(this)
     }
     post(req,res,next){
+        var _this = this;
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
-            body.user = this.userInfo._id;
+            body.user = _this.userInfo._id;
             new Article(body)
             .save((err,data)=>{
                 if(err){
@@ -122,7 +131,8 @@ class Pages extends BaseCom {
                     total = num;
                 })
                 .find(parms)
-                .populate('user')
+                .populate('user','_id userName name avatarImg')
+                .populate('articleThumbsUp','_id userName name avatarImg')
                 .skip((current - 1) * size/1)
                 .limit(size/1)
                 .sort('sort')
@@ -130,12 +140,38 @@ class Pages extends BaseCom {
                     if(err){
                         reject(err);
                     }
-                    resolve({
-                        total:total,
-                        current:current,
-                        size:size,
-                        records:doc
-                    });
+                    var i = 0;
+                   
+                    if(doc && doc.length){
+                        doc.forEach((Article_doc)=>{
+                            if(Article_doc.articleThumbsUp && Article_doc.articleThumbsUp.length){
+                                Article_doc._doc.likeNum = Article_doc.articleThumbsUp.length
+                            }else{
+                                Article_doc._doc.likeNum = 0;
+                            }
+                            
+                            var imgArr = this.getimgsrc(Article_doc._doc.content);  // arr 为包含所有img标签的数组
+                            if(imgArr && imgArr.length){
+                                Article_doc._doc.thumbnail = imgArr[0]
+                            }else{
+                                Article_doc._doc.thumbnail = ''
+                            }
+                            Article_doc._doc.content = this.deleteTag(Article_doc._doc.content).slice(0,100);
+                            Comment.countDocuments({article:Article_doc._id},(err,num)=>{
+                                Article_doc._doc.commentNum = err?0:num;
+                                i++;
+                                if(i>=doc.length){
+                                    resolve({
+                                        total:total,
+                                        current:current,
+                                        size:size,
+                                        records:doc
+                                    });
+                                }
+                            })
+                        })
+                    }
+                    
                 })
         })
         pro.then((userData)=>{
@@ -156,17 +192,232 @@ class Pages extends BaseCom {
     }
     getNews(req,res,next) {
         var body = req.query;
+        var _this = this;
         var pro = new Promise((resolve, reject)=>{
            
                 Article
                 .findById(body)
-                .populate('user')
+                .populate('user','_id userName name avatarImg')
+                .populate('articleThumbsUp','_id userName name avatarImg')
                 .exec((err, doc) => {
                     if(err){
                         reject(err);
                     }
-                    resolve(doc);
+                    if(doc){
+                        var isCurrentUserLiked = false;
+                        if(doc._doc.articleThumbsUp && doc._doc.articleThumbsUp.length){
+                            for(var i=0;i<doc._doc.articleThumbsUp.length;i++){
+                                var item = doc._doc.articleThumbsUp[i]
+                                if(item._id == _this.userInfo._id ){
+                                    
+                                    isCurrentUserLiked = true;
+                                    break;
+                                }
+                            }
+                            
+                        }
+                        doc._doc.isCurrentUserLiked = this.userInfo._id?isCurrentUserLiked:false;
+                        var newData = {};
+                        if(doc.redNum){
+                            newData.redNum = ++doc._doc.redNum;
+                        }else{
+                            doc._doc.redNum = 1;
+                            newData.redNum =1;
+                        }
+                        Article.updateOne({
+                            _id:doc._id
+                        },newData,(err,docs)=>{
+                            err && reject(err);
+                            resolve(doc);
+                        })
+                    }else{
+                        resolve(doc);
+                    }
                 })
+        })
+        pro.then((userData)=>{
+            if(userData){
+                return res.json({
+                    code:200,
+                    msg:'succ',
+                    data:userData
+                })
+            }else{
+                return res.json({
+                    code:404,
+                    msg:'err',
+                })
+            }
+        })
+        .catch((err)=>{
+            return res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    articleThumbsUp(req,res,next) {
+        var body = req.query;
+        var _this = this;
+        var pro = new Promise((resolve, reject)=>{
+                Article
+                .findById({
+                    _id:body._id
+                })
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
+                    }
+                    if(doc._doc.articleThumbsUp && doc._doc.articleThumbsUp.length){
+                        var index = doc._doc.articleThumbsUp.indexOf(_this.userInfo._id);
+                        if(index>-1){
+                            doc._doc.articleThumbsUp.splice(index,1)
+                        }else{
+                            doc._doc.articleThumbsUp.push(_this.userInfo._id)
+                        }
+                    }else{
+                        doc._doc.articleThumbsUp.push(_this.userInfo._id)
+                    }
+                    var newData = {
+                        articleThumbsUp:doc._doc.articleThumbsUp
+                    }
+                    Article.updateOne({
+                        _id:body._id
+                    },newData,(err,docs)=>{
+                        err && reject(err);
+                        resolve(doc);
+                    })
+                })
+        })
+        pro.then((userData)=>{
+            if(userData){
+                return res.json({
+                    code:200,
+                    msg:'succ',
+                    data:userData
+                })
+            }else{
+                return res.json({
+                    code:404,
+                    msg:'err',
+                })
+            }
+        })
+        .catch((err)=>{
+            return res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    comment(req,res,next){
+        var _this = this;
+        var pro = new Promise((resolve, reject)=>{
+            var body = req.body;
+            body.from = _this.userInfo._id;
+            new Comment(body)
+            .save((err,data)=>{
+                if(err){
+                    return reject(err);
+                }
+                return resolve(data);
+            })
+        })
+        pro.then((userData)=>{
+            res.json({
+                code:200,
+                msg:'succ',
+                data:{
+                    ...userData,
+                }
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    getComment(req,res,next){
+        var _this = this;
+        var body = req.query;
+        const current = body.current || this.current,
+        size = body.size || this.size;
+        const sort = body.sortType=='asc'?1:-1;
+        var pro = new Promise((resolve, reject)=>{
+            let total = 0;
+            let parms = {...body}
+            delete parms.current;
+            delete parms.size;
+            delete parms.sortType;
+            Comment
+                .countDocuments({
+                    article:parms.article
+                },(err,num)=>{
+                    if(err){
+                        return reject(err)
+                    }
+                    total = num;
+                    Comment
+                    .find(parms)
+                    .populate('from','_id userName name avatarImg')
+                    // .populate('article')
+                    .skip((current - 1) * size/1)
+                    .limit(size/1)
+                    .sort({'meta.creatAt':sort})
+                    .exec((err, doc) => {
+                        if(err){
+                            reject(err);
+                        }
+                        var i = 0;
+                    
+                        if(doc && doc.length){
+                            doc.forEach((Comment_doc)=>{
+                                var isCurrentUserLiked = false;
+                                if(Comment_doc.commentThumbsUp && Comment_doc.commentThumbsUp.length){
+                                    Comment_doc._doc.likeNum = Comment_doc.commentThumbsUp.length;
+                                    isCurrentUserLiked = Comment_doc.commentThumbsUp.indexOf(_this.userInfo._id)>-1?true:false
+                                }else{
+                                    Comment_doc._doc.likeNum = 0;
+                                }
+                                Comment_doc._doc.isCurrentUserLiked = isCurrentUserLiked;
+                                CommentReply.countDocuments({comment:Comment_doc._id},(err,commentReplyNum)=>{
+
+                                    CommentReply.find({comment:Comment_doc._id})
+                                    .populate('from','_id userName name avatarImg')
+                                    .populate('to','_id userName name avatarImg')
+                                    .limit(3)
+                                    .exec((err,CommentReplyDoc)=>{
+                                        Comment_doc._doc.childCommentTotle = commentReplyNum;
+                                        Comment_doc._doc.childCommentList = err?[]:CommentReplyDoc;
+                                        i++;
+                                        if(i>=doc.length){
+                                            resolve({
+                                                total:total,
+                                                current:current,
+                                                size:size,
+                                                records:doc
+                                            });
+                                        }
+                                    })
+                                })
+                            })
+                        }else{
+                            resolve({
+                                total:total,
+                                current:current,
+                                size:size,
+                                records:doc
+                            });
+                        }
+                        
+                    })
+                })
+                
         })
         pro.then((userData)=>{
            
@@ -184,6 +435,143 @@ class Pages extends BaseCom {
             })
         })
     }
-   
+    commentReply(req,res,next){
+        var _this = this;
+        var pro = new Promise((resolve, reject)=>{
+            var body = req.body;
+            body.from = _this.userInfo._id;
+            new CommentReply(body)
+            .save((err,data)=>{
+                if(err){
+                    return reject(err);
+                }
+                return resolve(data);
+            })
+        })
+        pro.then((userData)=>{
+            res.json({
+                code:200,
+                msg:'succ',
+                data:{
+                    ...userData,
+                }
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    getCommentReply(req,res,next){
+        var _this = this;
+        var pro = new Promise((resolve, reject)=>{
+            var body = req.query;
+            CommentReply.find({comment:body._id})
+            .populate('from','_id userName name avatarImg')
+            .populate('to','_id userName name avatarImg')
+            .skip(body.index/1)
+            .limit(3)
+            .exec((err,doc)=>{
+                if(err){
+                    return reject(err)
+                }else{
+                    resolve(doc)
+                }
+            })
+        })
+        pro.then((userData)=>{
+            res.json({
+                code:200,
+                msg:'succ',
+                data:userData
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    commentThumbsUp(req,res,next){
+        var body = req.query;
+        var _this = this;
+        var pro = new Promise((resolve, reject)=>{
+            Comment
+                .findById({
+                    _id:body._id
+                })
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
+                    }
+                    if(!_this.userInfo._id){
+                        return resolve(doc);
+                    }
+                    if(doc._doc.commentThumbsUp && doc._doc.commentThumbsUp.length){
+                        var index = doc._doc.commentThumbsUp.indexOf(_this.userInfo._id);
+                        if(index>-1){
+                            doc._doc.commentThumbsUp.splice(index,1)
+                        }else{
+                            doc._doc.commentThumbsUp.push(_this.userInfo._id)
+                        }
+                    }else{
+                        doc._doc.commentThumbsUp.push(_this.userInfo._id)
+                    }
+                    var newData = {
+                        commentThumbsUp:doc._doc.commentThumbsUp
+                    }
+                    Comment.updateOne({
+                        _id:body._id
+                    },newData,(err,docs)=>{
+                        err && reject(err);
+                        resolve(doc);
+                    })
+                })
+        })
+        pro.then((userData)=>{
+            if(userData){
+                return res.json({
+                    code:200,
+                    msg:'succ',
+                    data:userData
+                })
+            }else{
+                return res.json({
+                    code:404,
+                    msg:'err',
+                })
+            }
+        })
+        .catch((err)=>{
+            return res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    deleteTag(tagStr){
+        var regx = /<[^>]*>|<\/[^>]*>/gm;
+        return tagStr.replace(regx,"");
+    }
+    /** 
+     * 获取html代码中图片地址 
+     * @param htmlstr 
+     * @returns {Array} 
+     */
+    getimgsrc(htmlstr) { 
+        var reg = /<img.+?src=('|")?([^'"]+)('|")?(?:\s+|>)/gim; 
+        var arr = []; 
+        var tem
+        while (tem = reg.exec(htmlstr)) { 
+            arr.push(tem[2]); 
+        } 
+        return arr; 
+    }
 }
 module.exports = new Pages()

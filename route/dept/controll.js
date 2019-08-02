@@ -42,7 +42,6 @@ class Pages extends BaseCom {
     delete(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
-            console.log(body);
             Dept.remove({
                 _id:{
                     $in:body.ids

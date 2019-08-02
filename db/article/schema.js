@@ -2,6 +2,7 @@
  * 
  *  */
 const mongoose = require('mongoose');
+const ObjectId = mongoose.Schema.Types.ObjectId;
 var articleSchema =  new mongoose.Schema({
     user:{
         type:mongoose.Schema.Types.ObjectId,
@@ -22,11 +23,16 @@ var articleSchema =  new mongoose.Schema({
         ref:'dictionarie',
         required:[true,"文章类型不能为空"]
     },
-    thumbnail:{
-        type:Array,
-    },
+
+    articleThumbsUp:[
+        {
+            type:ObjectId,
+            ref:'User'
+        }
+    ],
     redNum:{
         type:Number,
+        default:0
     },
     mdContent:{
         type:String
