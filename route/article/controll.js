@@ -1,4 +1,4 @@
-var Article = require('../../db/Article/model.js')
+var Article = require('../../db/article/model.js')
 var Comment = require('../../db/comment/model.js')
 var CommentReply = require('../../db/commentReply/model.js')
 const BaseCom = require('../../base/baseCom.js')
