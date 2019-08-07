@@ -1,5 +1,8 @@
 var User = require('../../db/user/model.js')
 var Role = require('../../db/role/model.js')
+var Article = require('../../db/article/model.js')
+var Comment = require('../../db/comment/model.js')
+var CommentReply = require('../../db/commentReply/model.js')
 const jwt = require('jsonwebtoken'); 
 const bcrypt = require('bcrypt') ; 
 const baseCom = require('../../base/baseCom.js')
@@ -13,6 +16,7 @@ class Account extends baseCom {
         this.userList = this.userList.bind(this);
         this.getAuthor = this.getAuthor.bind(this)
         this.signOut = this.signOut.bind(this);
+        this.article = this.article.bind(this);
     }
     signOut(req,res,next) {
         this.userInfo = {};
@@ -180,6 +184,166 @@ class Account extends baseCom {
                     msg:'succ',
                 })
             }
+        })
+    }
+    userHome(req,res,next) {
+        User.findById({
+            _id:req.query._id
+        })
+        .exec((err,user_doc)=>{
+            if(err){
+                return res.json({
+                    code:500,
+                    msg:err,
+                    data:{}
+                })
+            }
+            Promise.all([new Promise((resolve,reject)=>{
+                Article.find({
+                    user:req.query._id
+                },'content articleThumbsUp')
+                .populate('articleThumbsUp','_id')
+                .exec((err,articles)=>{
+                    console.log(articles);
+                    if(err){
+                        return reject(err)
+                    }
+                    var contentLength = 0;
+                    var articleThumbsUp = 0;
+                    if(articles && articles.length){
+                        articles.forEach((articles_doc)=>{
+                            contentLength += articles_doc.content.length;
+                            articleThumbsUp += articles_doc.articleThumbsUp.length
+                        })
+                    }
+                    user_doc._doc.articleNum = articles.length;
+                    user_doc._doc.wordsNum = contentLength;
+                    user_doc._doc.beLikeNum = articleThumbsUp;
+                    resolve(user_doc)
+                })
+            }),new Promise((resolve,reject)=>{
+                Follow.find({
+                    target:req.query._id
+                })
+                .populate('target','_id')
+                .exec((err,follows)=>{
+                    console.log(err);
+                    if(err){
+                        return reject(err)
+                    }
+                   
+                    user_doc._doc.fansNum = follows.length;
+                    resolve(follows)
+                })
+            }),new Promise((resolve,reject)=>{
+                Follow.find({
+                    source:req.query._id
+                })
+                .populate('source','_id')
+                .exec((err,follows)=>{
+                    console.log(err);
+                    if(err){
+                        return reject(err)
+                    }
+                   
+                    user_doc._doc.followNum = follows.length;
+                    resolve(follows)
+                })
+            })])
+            .then((data)=>{
+                return res.json({
+                    code:200,
+                    data:user_doc,
+                    msg:'succ',
+                })
+            })
+            .catch((err)=>{
+                return res.json({
+                    code:500,
+                    msg:err,
+                })
+            })
+            
+        })
+        
+    }
+    article(req,res,next) {
+        var _this = this;
+        var body = req.query;
+        const current = body.current || this.current,
+        size = body.size || this.size;
+        var pro = new Promise((resolve, reject)=>{
+            let total = 0;
+            let parms = {...body}
+            delete parms.current;
+            delete parms.size;
+            parms.self = false;
+            parms.status = 1;
+                Article
+                .countDocuments(parms,(err,num)=>{
+                    if(err){
+                        return reject(err)
+                    }
+                    total = num;
+                    Article.find(parms)
+                    .populate('user','_id userName name avatarImg')
+                    .populate('articleThumbsUp','_id userName name avatarImg')
+                    .skip((current - 1) * size/1)
+                    .limit(size/1)
+                    .sort('sort')
+                    .exec((err, doc) => {
+                        if(err){
+                            reject(err);
+                        }
+                        var i = 0;
+                       
+                        if(doc && doc.length){
+                            doc.forEach((Article_doc)=>{
+                                if(Article_doc.articleThumbsUp && Article_doc.articleThumbsUp.length){
+                                    Article_doc._doc.likeNum = Article_doc.articleThumbsUp.length
+                                }else{
+                                    Article_doc._doc.likeNum = 0;
+                                }
+                                
+                                var imgArr = _this.getimgsrc(Article_doc._doc.content);  // arr 为包含所有img标签的数组
+                                if(imgArr && imgArr.length){
+                                    Article_doc._doc.thumbnail = imgArr[0]
+                                }else{
+                                    Article_doc._doc.thumbnail = ''
+                                }
+                                Article_doc._doc.content = _this.deleteTag(Article_doc._doc.content).slice(0,100);
+                                Comment.countDocuments({article:Article_doc._id},(err,num)=>{
+                                    Article_doc._doc.commentNum = err?0:num;
+                                    i++;
+                                    if(i>=doc.length){
+                                        resolve({
+                                            total:total,
+                                            current:current,
+                                            size:size,
+                                            records:doc
+                                        });
+                                    }
+                                })
+                            })
+                        }
+                        
+                    })
+                })
+        })
+        pro.then((userData)=>{
+           
+            return res.json({
+                code:200,
+                msg:'succ',
+                data:userData
+            })
+        })
+        .catch((err)=>{
+            return res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
         })
     }
     userList(req,res,next) {

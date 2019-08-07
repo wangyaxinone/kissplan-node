@@ -1,4 +1,3 @@
-
 var Menu = require('./controll');
 const express = require('express');
 const router = express.Router();

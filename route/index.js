@@ -7,6 +7,7 @@ var dept = require("./dept/index.js")
 var uploadFile = require("./uploadFile/index.js")
 var image = require("./image/index.js")
 var article = require("./article/index.js")
+var follow = require("./follow/index.js")
 module.exports = app => {
     app.use('/user',user)
     app.use('/page',pagesRoute)
@@ -17,4 +18,5 @@ module.exports = app => {
     app.use('/admin',uploadFile)
     app.use('/admin',image)
     app.use('/admin',article)
+    app.use('/admin',follow)
 }

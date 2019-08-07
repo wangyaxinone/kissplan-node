@@ -4,7 +4,7 @@ const User = require('./user/model')
 const Role = require('./role/model')
 const RoleMenu = require('./roleMenu/model')
 const MenuDb = require('./menu/db')
-mongoose.connect('mongodb://127.0.0.1:27017/kissPlan',{ useNewUrlParser: true });
+mongoose.connect('mongodb://129.28.147.252:27017/kissPlan',{ useNewUrlParser: true });
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {

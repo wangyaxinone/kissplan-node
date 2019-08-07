@@ -82,5 +82,23 @@ class baseCom {
     roleAuth(req,res,next){
         next()
     }
+    deleteTag(tagStr){
+        var regx = /<[^>]*>|<\/[^>]*>/gm;
+        return tagStr.replace(regx,"");
+    }
+    /** 
+     * 获取html代码中图片地址 
+     * @param htmlstr 
+     * @returns {Array} 
+     */
+    getimgsrc(htmlstr) { 
+        var reg = /<img.+?src=('|")?([^'"]+)('|")?(?:\s+|>)/gim; 
+        var arr = []; 
+        var tem
+        while (tem = reg.exec(htmlstr)) { 
+            arr.push(tem[2]); 
+        } 
+        return arr; 
+    }
 }
 module.exports = baseCom;

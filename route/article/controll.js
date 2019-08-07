@@ -113,6 +113,7 @@ class Pages extends BaseCom {
         })
     }
     get(req,res,next) {
+        var _this = this;
         var body = req.query;
         const current = body.current || this.current,
         size = body.size || this.size;
@@ -129,49 +130,49 @@ class Pages extends BaseCom {
                         return reject(err)
                     }
                     total = num;
-                })
-                .find(parms)
-                .populate('user','_id userName name avatarImg')
-                .populate('articleThumbsUp','_id userName name avatarImg')
-                .skip((current - 1) * size/1)
-                .limit(size/1)
-                .sort('sort')
-                .exec((err, doc) => {
-                    if(err){
-                        reject(err);
-                    }
-                    var i = 0;
-                   
-                    if(doc && doc.length){
-                        doc.forEach((Article_doc)=>{
-                            if(Article_doc.articleThumbsUp && Article_doc.articleThumbsUp.length){
-                                Article_doc._doc.likeNum = Article_doc.articleThumbsUp.length
-                            }else{
-                                Article_doc._doc.likeNum = 0;
-                            }
-                            
-                            var imgArr = this.getimgsrc(Article_doc._doc.content);  // arr 为包含所有img标签的数组
-                            if(imgArr && imgArr.length){
-                                Article_doc._doc.thumbnail = imgArr[0]
-                            }else{
-                                Article_doc._doc.thumbnail = ''
-                            }
-                            Article_doc._doc.content = this.deleteTag(Article_doc._doc.content).slice(0,100);
-                            Comment.countDocuments({article:Article_doc._id},(err,num)=>{
-                                Article_doc._doc.commentNum = err?0:num;
-                                i++;
-                                if(i>=doc.length){
-                                    resolve({
-                                        total:total,
-                                        current:current,
-                                        size:size,
-                                        records:doc
-                                    });
+                    Article.find(parms)
+                    .populate('user','_id userName name avatarImg')
+                    .populate('articleThumbsUp','_id userName name avatarImg')
+                    .skip((current - 1) * size/1)
+                    .limit(size/1)
+                    .sort('sort')
+                    .exec((err, doc) => {
+                        if(err){
+                            reject(err);
+                        }
+                        var i = 0;
+                       
+                        if(doc && doc.length){
+                            doc.forEach((Article_doc)=>{
+                                if(Article_doc.articleThumbsUp && Article_doc.articleThumbsUp.length){
+                                    Article_doc._doc.likeNum = Article_doc.articleThumbsUp.length
+                                }else{
+                                    Article_doc._doc.likeNum = 0;
                                 }
+                                
+                                var imgArr = _this.getimgsrc(Article_doc._doc.content);  // arr 为包含所有img标签的数组
+                                if(imgArr && imgArr.length){
+                                    Article_doc._doc.thumbnail = imgArr[0]
+                                }else{
+                                    Article_doc._doc.thumbnail = ''
+                                }
+                                Article_doc._doc.content = _this.deleteTag(Article_doc._doc.content).slice(0,100);
+                                Comment.countDocuments({article:Article_doc._id},(err,num)=>{
+                                    Article_doc._doc.commentNum = err?0:num;
+                                    i++;
+                                    if(i>=doc.length){
+                                        resolve({
+                                            total:total,
+                                            current:current,
+                                            size:size,
+                                            records:doc
+                                        });
+                                    }
+                                })
                             })
-                        })
-                    }
-                    
+                        }
+                        
+                    })
                 })
         })
         pro.then((userData)=>{
@@ -555,23 +556,6 @@ class Pages extends BaseCom {
             })
         })
     }
-    deleteTag(tagStr){
-        var regx = /<[^>]*>|<\/[^>]*>/gm;
-        return tagStr.replace(regx,"");
-    }
-    /** 
-     * 获取html代码中图片地址 
-     * @param htmlstr 
-     * @returns {Array} 
-     */
-    getimgsrc(htmlstr) { 
-        var reg = /<img.+?src=('|")?([^'"]+)('|")?(?:\s+|>)/gim; 
-        var arr = []; 
-        var tem
-        while (tem = reg.exec(htmlstr)) { 
-            arr.push(tem[2]); 
-        } 
-        return arr; 
-    }
+    
 }
 module.exports = new Pages()
