@@ -1,4 +1,4 @@
-var Follow = require('../../db/Follow/model.js')
+var Follow = require('../../db/follow/model.js')
 const BaseCom = require('../../base/baseCom.js')
 const {recursion} = require('../../utils/index.js')
 class Pages extends BaseCom {
@@ -13,14 +13,25 @@ class Pages extends BaseCom {
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
             body.source = this.userInfo._id;
-            console.log(body);
-            new Follow(body)
-            .save((err,data)=>{
+            Follow
+            .find(body)
+            .exec((err,doc)=>{
                 if(err){
                     return reject(err);
+                }  
+                if(!doc || !doc.length){
+                    new Follow(body)
+                    .save((err,data)=>{
+                        if(err){
+                            return reject(err);
+                        }
+                        return resolve(data);
+                    })
+                }else{
+                    return reject('已关注');
                 }
-                return resolve(data);
             })
+            
         })
         pro.then((userData)=>{
            
@@ -43,11 +54,7 @@ class Pages extends BaseCom {
     delete(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
-            Follow.remove({
-                _id:{
-                    $in:body.ids
-                }
-            },(err)=>{
+            Follow.remove(body,(err)=>{
                 err && reject(err);
                 resolve({});
             })
@@ -108,13 +115,35 @@ class Pages extends BaseCom {
     get(req,res){
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
-                Follow.find(body)
-                .sort("sort")
-                .exec((err, doc) => {
+            const current = body.current || this.current,
+            size = body.size || this.size;
+            let total = 0;
+            let parms = {...body}
+            delete parms.current;
+            delete parms.size;
+            Follow
+                .countDocuments(parms,(err,num)=>{
                     if(err){
                         reject(err);
                     }
-                    resolve(recursion(doc));
+                    total = num;
+                    Follow.find(parms)
+                        .populate('target')
+                        .populate('source')
+                        .skip((current - 1) * size/1)
+                        .limit(size/1)
+                        .sort({'meta.updateAt': -1})
+                        .exec((err, doc) => {
+                            if(err){
+                                reject(err);
+                            }
+                            resolve({
+                                total:total,
+                                current:current,
+                                size:size,
+                                records:doc
+                            });
+                        })
                 })
         })
         pro.then((userData)=>{

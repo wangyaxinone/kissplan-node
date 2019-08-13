@@ -4,12 +4,12 @@ var followSchema = new mongoose.Schema({
     
     source:{
         type:ObjectId,
-        ref:'user',
+        ref:'User',
         required:[true,"来源不能为空"]
     },
     target:{
         type:ObjectId,
-        ref:'user',
+        ref:'User',
         required:[true,"目标不能为空"]
     },
     meta:{

@@ -135,7 +135,7 @@ class Pages extends BaseCom {
                     .populate('articleThumbsUp','_id userName name avatarImg')
                     .skip((current - 1) * size/1)
                     .limit(size/1)
-                    .sort('sort')
+                    .sort({'meta.creatAt':-1})
                     .exec((err, doc) => {
                         if(err){
                             reject(err);
@@ -209,7 +209,7 @@ class Pages extends BaseCom {
                         if(doc._doc.articleThumbsUp && doc._doc.articleThumbsUp.length){
                             for(var i=0;i<doc._doc.articleThumbsUp.length;i++){
                                 var item = doc._doc.articleThumbsUp[i]
-                                if(item._id == _this.userInfo._id ){
+                                if(item && item._id == _this.userInfo._id ){
                                     
                                     isCurrentUserLiked = true;
                                     break;

@@ -5,5 +5,5 @@ const router = express.Router();
 router.post('/follow',Follow.authentication,Follow.post);
 router.delete('/follow',Follow.authentication,Follow.delete);
 router.put('/follow',Follow.authentication,Follow.put);
-router.get('/follow',Follow.authentication,Follow.get);
+router.get('/follow',Follow.get);
 module.exports = router;

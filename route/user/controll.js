@@ -2,7 +2,7 @@ var User = require('../../db/user/model.js')
 var Role = require('../../db/role/model.js')
 var Article = require('../../db/article/model.js')
 var Comment = require('../../db/comment/model.js')
-var CommentReply = require('../../db/commentReply/model.js')
+var Follow = require('../../db/follow/model.js')
 const jwt = require('jsonwebtoken'); 
 const bcrypt = require('bcrypt') ; 
 const baseCom = require('../../base/baseCom.js')
@@ -17,6 +17,8 @@ class Account extends baseCom {
         this.getAuthor = this.getAuthor.bind(this)
         this.signOut = this.signOut.bind(this);
         this.article = this.article.bind(this);
+        this.userHome = this.userHome.bind(this);
+        this.resertPassword = this.resertPassword.bind(this);
     }
     signOut(req,res,next) {
         this.userInfo = {};
@@ -42,7 +44,7 @@ class Account extends baseCom {
                             userName:req.body.userName,
                             passWord:req.body.passWord,
                             phone:req.body.phone,
-                            avatarImg:this.baseUrl+'/images/avatarImg.jpg',
+                            avatarImg:'/images/avatarImg.jpg',
                             roleId:[roleData.id]
                         })
                         name.save(function(err){
@@ -187,6 +189,7 @@ class Account extends baseCom {
         })
     }
     userHome(req,res,next) {
+        var _this = this;
         User.findById({
             _id:req.query._id
         })
@@ -204,7 +207,6 @@ class Account extends baseCom {
                 },'content articleThumbsUp')
                 .populate('articleThumbsUp','_id')
                 .exec((err,articles)=>{
-                    console.log(articles);
                     if(err){
                         return reject(err)
                     }
@@ -227,7 +229,6 @@ class Account extends baseCom {
                 })
                 .populate('target','_id')
                 .exec((err,follows)=>{
-                    console.log(err);
                     if(err){
                         return reject(err)
                     }
@@ -241,12 +242,25 @@ class Account extends baseCom {
                 })
                 .populate('source','_id')
                 .exec((err,follows)=>{
-                    console.log(err);
                     if(err){
                         return reject(err)
                     }
                    
                     user_doc._doc.followNum = follows.length;
+                    resolve(follows)
+                })
+            }),new Promise((resolve,reject)=>{
+                Follow.find({
+                    source:_this.userInfo._id,
+                    target:req.query._id
+                })
+                .exec((err,follows)=>{
+                    if(err){
+                        return reject(err)
+                    }
+                    if(follows && follows.length){
+                        user_doc._doc.isFollow = true;
+                    }
                     resolve(follows)
                 })
             })])
@@ -389,10 +403,10 @@ class Account extends baseCom {
                                 return child._id;
                             })
                         }
-                        item._doc.roleName = item._doc.roleName.join(',')
-                        item._doc.deptName = item._doc.deptName.join(',')
-                        item._doc.roleId = item._doc.roleId.join(',')
-                        item._doc.deptId = item._doc.deptId.join(',')
+                        item._doc.roleName = item._doc.roleName && item._doc.roleName.join(',')
+                        item._doc.deptName = item._doc.deptName && item._doc.deptName.join(',')
+                        item._doc.roleId = item._doc.roleId && item._doc.roleId.join(',')
+                        item._doc.deptId = item._doc.deptId && item._doc.deptId.join(',')
                         if(item._doc.sex){
 
                             item._doc.sexName = item._doc.sex.dictValue
@@ -490,7 +504,7 @@ class Account extends baseCom {
             var body = req.body;
             var newData = {}
             for(var key in User.schema.obj){
-                if(key!=='meta'){
+                if(key!=='meta' ||  key!=='passWord'){
                     newData[key] = body[key]
                 }
             }
@@ -500,6 +514,136 @@ class Account extends baseCom {
                 err && reject(err);
                 resolve(docs);
             })
+        })
+        pro.then((userData)=>{
+           
+            res.json({
+                code:200,
+                msg:'succ',
+                data:{
+                    ...userData,
+                }
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    putUser(req,res,next){
+        var pro = new Promise((resolve, reject)=>{
+            var body = req.body;
+            var newData = {}
+            for(var key in body){
+                if(key!=='meta' ||  key!=='passWord'||  key!=='userName'||  key!=='_id'){
+                    newData[key] = body[key]
+                }
+            }
+            User.updateOne({
+                _id:body._id
+            },newData,(err,docs)=>{
+                err && reject(err);
+                resolve(docs);
+            })
+        })
+        pro.then((userData)=>{
+           
+            res.json({
+                code:200,
+                msg:'succ',
+                data:{
+                    ...userData,
+                }
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    resertPassword(req,res,next) {
+        var _this = this;
+        var pro = new Promise((resolve, reject)=>{
+            var body = req.body;
+            bcrypt.compare( body.oldPassword,_this.userInfo.passWord, function(err, bool) {
+                if(err){
+                    return reject(err)
+                }
+                if(bool){
+                   
+                    var newData = {};
+                    const saltRounds = 10 ; 
+                    bcrypt.genSalt(saltRounds,function(err, salt){
+                        err && reject(err);
+                        bcrypt.hash(body.passWord, salt, function(err, hash) {
+                            err && reject(err);
+                            
+                            newData.passWord = hash;
+                            User.updateOne({
+                                _id:_this.userInfo._id
+                            },newData,(err,docs)=>{
+                                err && reject(err);
+                                resolve(docs);
+                            })
+                        });
+                    })
+                   
+                }else{
+                    return reject('账号密码错误')
+                }
+                
+            });
+        })
+        pro.then((userData)=>{
+           
+            res.json({
+                code:200,
+                msg:'succ',
+                data:{
+                    ...userData,
+                }
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    resertPasswordAdmin(req,res,next) {
+        var _this = this;
+        var pro = new Promise((resolve, reject)=>{
+            var body = req.body;
+            console.log(body);
+            var newData = {};
+            const saltRounds = 10 ; 
+            if(!body._id){
+                reject("_id 为空");
+            }
+            bcrypt.genSalt(saltRounds,function(err, salt){
+                err && reject(err);
+                bcrypt.hash('123456', salt, function(err, hash) {
+                    err && reject(err);
+                    console.log(hash);
+                    newData.passWord = hash;
+                    User.updateOne({
+                        _id:body._id
+                    },newData,(err,docs)=>{
+                        err && reject(err);
+                        resolve(docs);
+                    })
+                });
+            })
+                   
+            
         })
         pro.then((userData)=>{
            
@@ -639,6 +783,9 @@ class Account extends baseCom {
                 data:{}
             })
         })
+    }
+    updateAuthor(req,res,next) {
+
     }
     switchEnable(req,res,next){
         var pro = new Promise((resolve, reject)=>{
