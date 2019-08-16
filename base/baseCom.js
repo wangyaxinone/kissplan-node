@@ -83,6 +83,9 @@ class baseCom {
         next()
     }
     deleteTag(tagStr){
+        if(!tagStr){
+            return ''
+        }
         var regx = /<[^>]*>|<\/[^>]*>/gm;
         return tagStr.replace(regx,"");
     }

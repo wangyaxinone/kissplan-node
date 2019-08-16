@@ -64,6 +64,11 @@ var userSchema = new mongoose.Schema({
     avatarImg:{
         type:String
     },
+    //优先级：评论 +1 被关注 +2 发表文章 +10
+    priority:{
+        type:Number,
+        default:1
+    },
     remark:{
         type:String,
         minlength:[10,"minlength >=10"],

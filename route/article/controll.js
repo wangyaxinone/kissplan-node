@@ -11,11 +11,13 @@ class Pages extends BaseCom {
         this.put = this.put.bind(this);
         this.get = this.get.bind(this);
         this.getNews = this.getNews.bind(this);
+        this.getNewsTwo = this.getNewsTwo.bind(this);
         this.articleThumbsUp = this.articleThumbsUp.bind(this);
         this.comment = this.comment.bind(this);
         this.getComment = this.getComment.bind(this);
         this.commentReply = this.commentReply.bind(this)
         this.commentThumbsUp = this.commentThumbsUp.bind(this)
+        this.ArticlesAdmin = this.ArticlesAdmin.bind(this)
     }
     post(req,res,next){
         var _this = this;
@@ -81,15 +83,17 @@ class Pages extends BaseCom {
     put(req,res,next){
         var pro = new Promise((resolve, reject)=>{
             var body = req.body;
+            console.log(body);
             var newData = {}
-            for(var key in Article.schema.obj){
-                if(key!=='meta'){
-                    newData[key] = body[key]
-                }
-            }
+            // for(var key in Article.schema.obj){
+            //     if(key!=='meta'){
+            //         body[key] && (newData[key] = body[key])
+            //     }
+            // }
+            
             Article.updateOne({
                 _id:body._id
-            },newData,(err,docs)=>{
+            },body,(err,docs)=>{
                 err && reject(err);
                 resolve(docs);
             })
@@ -191,6 +195,90 @@ class Pages extends BaseCom {
             })
         })
     }
+    ArticlesAdmin(req,res,next) {
+        var _this = this;
+        var body = req.query;
+        const current = body.current || this.current,
+        size = body.size || this.size;
+        var pro = new Promise((resolve, reject)=>{
+            let total = 0;
+            let parms = {...body}
+            delete parms.current;
+            delete parms.size;
+                Article
+                .countDocuments(parms,(err,num)=>{
+                    if(err){
+                        return reject(err)
+                    }
+                    total = num;
+                    Article.find(parms)
+                    .populate('user','_id userName name avatarImg')
+                    .populate('articleThumbsUp','_id userName name avatarImg')
+                    .skip((current - 1) * size/1)
+                    .limit(size/1)
+                    .sort({'meta.creatAt':-1})
+                    .exec((err, doc) => {
+                        if(err){
+                            reject(err);
+                        }
+                        var i = 0;
+                       
+                        if(doc && doc.length){
+                            doc.forEach((Article_doc)=>{
+                                if(Article_doc.articleThumbsUp && Article_doc.articleThumbsUp.length){
+                                    Article_doc._doc.likeNum = Article_doc.articleThumbsUp.length
+                                }else{
+                                    Article_doc._doc.likeNum = 0;
+                                }
+                                
+                                var imgArr = _this.getimgsrc(Article_doc._doc.content);  // arr 为包含所有img标签的数组
+                                if(imgArr && imgArr.length){
+                                    Article_doc._doc.thumbnail = imgArr[0]
+                                }else{
+                                    Article_doc._doc.thumbnail = ''
+                                }
+                                Article_doc._doc.content = _this.deleteTag(Article_doc._doc.content).slice(0,100);
+                                Comment.countDocuments({article:Article_doc._id},(err,num)=>{
+                                    Article_doc._doc.commentNum = err?0:num;
+                                    i++;
+                                    if(i>=doc.length){
+                                        resolve({
+                                            total:total,
+                                            current:current,
+                                            size:size,
+                                            records:doc
+                                        });
+                                    }
+                                })
+                            })
+                        }else{
+                            resolve({
+                                total:0,
+                                current:current,
+                                size:size,
+                                records:[]
+                            });
+                        }
+                        
+                    })
+                })
+        })
+        pro.then((userData)=>{
+           
+            return res.json({
+                code:200,
+                msg:'succ',
+                data:userData
+            })
+        })
+        .catch((err)=>{
+            return res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
     getNews(req,res,next) {
         var body = req.query;
         var _this = this;
@@ -221,16 +309,73 @@ class Pages extends BaseCom {
                         var newData = {};
                         if(doc.redNum){
                             newData.redNum = ++doc._doc.redNum;
+                            newData.priority = ++doc._doc.priority;
                         }else{
                             doc._doc.redNum = 1;
                             newData.redNum =1;
                         }
+                        console.log(newData);
                         Article.updateOne({
                             _id:doc._id
                         },newData,(err,docs)=>{
                             err && reject(err);
                             resolve(doc);
                         })
+                    }else{
+                        resolve(doc);
+                    }
+                })
+        })
+        pro.then((userData)=>{
+            if(userData){
+                return res.json({
+                    code:200,
+                    msg:'succ',
+                    data:userData
+                })
+            }else{
+                return res.json({
+                    code:404,
+                    msg:'err',
+                })
+            }
+        })
+        .catch((err)=>{
+            return res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
+    getNewsTwo(req,res,next) {
+        var body = req.query;
+        var _this = this;
+        var pro = new Promise((resolve, reject)=>{
+           
+                Article
+                .findById(body)
+                .populate('user','_id userName name avatarImg')
+                .populate('articleThumbsUp','_id userName name avatarImg')
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
+                    }
+                    if(doc){
+                        var isCurrentUserLiked = false;
+                        if(doc._doc.articleThumbsUp && doc._doc.articleThumbsUp.length){
+                            for(var i=0;i<doc._doc.articleThumbsUp.length;i++){
+                                var item = doc._doc.articleThumbsUp[i]
+                                if(item && item._id == _this.userInfo._id ){
+                                    
+                                    isCurrentUserLiked = true;
+                                    break;
+                                }
+                            }
+                            
+                        }
+                        doc._doc.isCurrentUserLiked = this.userInfo._id?isCurrentUserLiked:false;
+                        resolve(doc);
                     }else{
                         resolve(doc);
                     }
@@ -270,19 +415,22 @@ class Pages extends BaseCom {
                     if(err){
                         reject(err);
                     }
+                    var newData = {
+                    }
                     if(doc._doc.articleThumbsUp && doc._doc.articleThumbsUp.length){
                         var index = doc._doc.articleThumbsUp.indexOf(_this.userInfo._id);
                         if(index>-1){
                             doc._doc.articleThumbsUp.splice(index,1)
+                            newData.priority = doc._doc.priority-2;
                         }else{
+                            newData.priority = doc._doc.priority+2;
                             doc._doc.articleThumbsUp.push(_this.userInfo._id)
                         }
                     }else{
                         doc._doc.articleThumbsUp.push(_this.userInfo._id)
                     }
-                    var newData = {
-                        articleThumbsUp:doc._doc.articleThumbsUp
-                    }
+                   
+                    newData.articleThumbsUp = doc._doc.articleThumbsUp;
                     Article.updateOne({
                         _id:body._id
                     },newData,(err,docs)=>{
@@ -323,7 +471,24 @@ class Pages extends BaseCom {
                 if(err){
                     return reject(err);
                 }
-                return resolve(data);
+                Article
+                .findById({
+                    _id:body.article
+                })
+                .exec((err, doc) => {
+                    if(err){
+                        reject(err);
+                    }
+                    var newData = {
+                        priority:doc._doc.priority+1
+                    }
+                    Article.updateOne({
+                        _id:body.article
+                    },newData,(err,docs)=>{
+                        err && reject(err);
+                        resolve(docs);
+                    })
+                })
             })
         })
         pro.then((userData)=>{

@@ -23,7 +23,11 @@ var articleSchema =  new mongoose.Schema({
         ref:'dictionarie',
         required:[true,"文章类型不能为空"]
     },
-
+    //优先级： 查看 +1 评论 +1 点赞 +2 
+    priority:{
+        type:Number,
+        default:1
+    },
     articleThumbsUp:[
         {
             type:ObjectId,
