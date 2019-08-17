@@ -2,6 +2,7 @@ var Article = require('../../db/article/model.js')
 var Comment = require('../../db/comment/model.js')
 var CommentReply = require('../../db/commentReply/model.js')
 const BaseCom = require('../../base/baseCom.js')
+var User = require('../../db/user/model.js')
 const {recursion} = require('../../utils/index.js')
 class Pages extends BaseCom {
     constructor(){
@@ -29,7 +30,18 @@ class Pages extends BaseCom {
                 if(err){
                     return reject(err);
                 }
-                return resolve(data);
+                User.findOne({_id:body.user})
+                .exec((err,doc)=>{
+                    var newData = {
+                        priority:doc._doc.priority +10,
+                    };
+                    User.updateOne({
+                        _id:body.user
+                    },newData,(err,docs)=>{
+                        err && reject(err);
+                        resolve(docs);
+                    })
+                })
             })
         })
         pro.then((userData)=>{
@@ -53,13 +65,34 @@ class Pages extends BaseCom {
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
             var ids = body.ids.split(',')
-            Article.remove({
+            Article.find({
                 _id:{
                     $in:ids
                 }
-            },(err)=>{
-                err && reject(err);
-                resolve({});
+            })
+            .exec((err,docs)=>{
+                if(docs && docs.length){
+                    docs.forEach((article)=>{
+                        User.findOne({_id:article.user})
+                        .exec((err,user_doc)=>{
+                            var newData = {
+                                priority:user_doc._doc.priority - 10,
+                            };
+                            User.updateOne({
+                                _id:article.user
+                            },newData,(err,docs)=>{
+                            })
+                        })
+                    })
+                }
+                Article.deleteMany({
+                    _id:{
+                        $in:ids
+                    }
+                },(err)=>{
+                    err && reject(err);
+                    resolve({});
+                })
             })
         })
         pro.then((userData)=>{
@@ -139,7 +172,7 @@ class Pages extends BaseCom {
                     .populate('articleThumbsUp','_id userName name avatarImg')
                     .skip((current - 1) * size/1)
                     .limit(size/1)
-                    .sort({'meta.creatAt':-1})
+                    .sort({'priority':-1})
                     .exec((err, doc) => {
                         if(err){
                             reject(err);

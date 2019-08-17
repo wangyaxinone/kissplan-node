@@ -1,5 +1,6 @@
 var Follow = require('../../db/follow/model.js')
 const BaseCom = require('../../base/baseCom.js')
+var User = require('../../db/user/model.js')
 const {recursion} = require('../../utils/index.js')
 class Pages extends BaseCom {
     constructor(){
@@ -25,7 +26,18 @@ class Pages extends BaseCom {
                         if(err){
                             return reject(err);
                         }
-                        return resolve(data);
+                        User.findOne({_id:body.target})
+                        .exec((err,doc)=>{
+                            var newData = {
+                                priority:doc._doc.priority +1,
+                            };
+                            User.updateOne({
+                                _id:body.target
+                            },newData,(err,docs)=>{
+                                err && reject(err);
+                                return resolve(docs);
+                            })
+                        })
                     })
                 }else{
                     return reject('已关注');
@@ -57,6 +69,18 @@ class Pages extends BaseCom {
             Follow.remove(body,(err)=>{
                 err && reject(err);
                 resolve({});
+                User.findOne({_id:body.target})
+                .exec((err,doc)=>{
+                    var newData = {
+                        priority:doc._doc.priority -1,
+                    };
+                    User.updateOne({
+                        _id:body.target
+                    },newData,(err,docs)=>{
+                        err && reject(err);
+                        return resolve({});
+                    })
+                })
             })
         })
         pro.then((userData)=>{
