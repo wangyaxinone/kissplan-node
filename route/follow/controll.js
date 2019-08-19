@@ -71,6 +71,9 @@ class Pages extends BaseCom {
                 resolve({});
                 User.findOne({_id:body.target})
                 .exec((err,doc)=>{
+                    if(!doc || err){
+                        return reject(err);
+                    }
                     var newData = {
                         priority:doc._doc.priority -1,
                     };

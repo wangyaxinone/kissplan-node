@@ -58,6 +58,7 @@ class Account extends baseCom {
     }
     post(req,res,next){
         var file = req.file;
+        console.log(file);
         this.upToQiniu(file.path,file.filename)
         .then((userData)=>{
             fs.unlink(file.path, (err) => {

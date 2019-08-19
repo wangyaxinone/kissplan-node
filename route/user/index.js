@@ -15,6 +15,7 @@ router.put('/user',User.authentication,User.put);
 router.put('/putUser',User.authentication,User.putUser);
 router.delete('/user',User.authentication,User.delete);
 router.get('/getAuthor',User.authentication,User.getAuthor);
+router.get('/getHotAuthor',User.getHotAuthor);
 router.put('/getAuthor',User.authentication,User.updateAuthor);
 router.put('/switchEnable',User.authentication,User.switchEnable);
 router.get('/signOut',User.authentication,User.signOut);
