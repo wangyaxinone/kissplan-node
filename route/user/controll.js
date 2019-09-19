@@ -89,6 +89,67 @@ class Account extends baseCom {
             })
         })
     }
+    signInAdmin(req,res,next) {
+        var pro = new Promise((resolve, reject)=>{
+            User.findOne({userName :req.body.userName })
+            .populate('deptId')
+            .populate('roleId')
+            .exec((err,data)=>{
+                if(!data){
+                    return reject('账号密码错误')
+                }
+                if(err){
+                    return reject(err)
+                }
+                console.log();
+                var falg = false;
+                if(data.roleId && data.roleId.length){
+                    data.roleId.forEach((item)=>{
+                        if(item.roleAlias =='superAdmin' || item.roleAlias =='admin'){
+                            falg = true;
+                        }
+                    })
+                }
+                if(!falg){
+                    return reject('没有权限')
+                }
+                bcrypt.compare(req.body.passWord, data.passWord, function(err, bool) {
+                    if(err){
+                        return reject(err)
+                    }
+                    if(bool){
+
+                        let content =data._doc; // 要生成token的主题信息
+                        let secretOrPrivateKey="suiyi" // 这是加密的key（密钥） 
+                        let token = jwt.sign(content, secretOrPrivateKey, {
+                            expiresIn: 60*60*24  // 1小时过期
+                        });
+                        delete data._doc.passWord
+                        data._doc.token = token;
+                        return resolve(data._doc)
+                    }else{
+                        return reject('账号密码错误')
+                    }
+                    
+                });
+            })
+            
+        })
+        pro.then((userData)=>{
+            res.json({
+                code:200,
+                msg:'succ',
+                data:userData
+            })
+        })
+        .catch((err)=>{
+            res.json({
+                code:500,
+                msg:err,
+                data:{}
+            })
+        })
+    }
     signIn(req,res,next) {
         var pro = new Promise((resolve, reject)=>{
             User.findOne({userName :req.body.userName })
@@ -339,6 +400,13 @@ class Account extends baseCom {
                                     }
                                 })
                             })
+                        }else{
+                            resolve({
+                                total:total,
+                                current:current,
+                                size:size,
+                                records:[]
+                            });
                         }
                         
                     })
@@ -785,7 +853,6 @@ class Account extends baseCom {
         })
     }
     getHotAuthor(req,res,next) {
-        
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
             const current = body.current || this.current,
@@ -850,7 +917,6 @@ class Account extends baseCom {
                                 
                             })
                         }
-        
                         resolve({
                             total:total,
                             current:current,

@@ -134,6 +134,7 @@ class Pages extends BaseCom {
     getDict(req,res,next){
         var pro = new Promise((resolve, reject)=>{
             var body = req.query;
+            console.log(body);
                 let params = {
                     ...body,
                     parentId:{

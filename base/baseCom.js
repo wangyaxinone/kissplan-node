@@ -34,6 +34,7 @@ class baseCom {
     }
     authentication(req,res,next) {
         var _this = this;
+        console.log(req);
         const token = req.headers['blade-auth']|| req.cookies['x-refresh-token']
         if(token){
             let secretOrPrivateKey="suiyi"; // 这是加密的key（密钥） 

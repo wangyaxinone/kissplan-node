@@ -174,6 +174,7 @@ class Pages extends BaseCom {
                     .limit(size/1)
                     .sort({'priority':-1})
                     .exec((err, doc) => {
+                        
                         if(err){
                             reject(err);
                         }
@@ -207,6 +208,13 @@ class Pages extends BaseCom {
                                     }
                                 })
                             })
+                        }else{
+                            resolve({
+                                total:total,
+                                current:current,
+                                size:size,
+                                records:[]
+                            });
                         }
                         
                     })
